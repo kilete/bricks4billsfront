@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Login - Bricks4Bills</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="i18n.js"></script>
+    <style>
+        .demo-box {
+            background: linear-gradient(135deg, var(--primary-light) 0%, #ffe8cc 100%);
+            border-radius: var(--radius);
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.82rem;
+            border: 1.5px solid rgba(246, 139, 30, 0.15);
+            font-weight: 500;
+            color: var(--gray-700);
+        }
+        .demo-box strong { color: var(--primary-darker); font-weight: 800; }
+    </style>
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-form-section">
+            <select class="vh-lang-switcher" data-i18n-skip aria-label="Language" onchange="setLanguage(this.value)" style="padding:0.4rem 0.6rem;border-radius:6px;border:1.5px solid var(--gray-200);font-size:0.85rem;font-weight:600;float:right;"><option value="en">English</option><option value="pcm">Pidgin</option><option value="yo">Yorùbá</option><option value="ha">Hausa</option><option value="ig">Igbo</option></select><h2><span data-i18n="vendor_login_title">Vendor Login</span></h2>
+            <p>Access your store dashboard and manage orders</p>
+
+            <div class="demo-box">
+                <strong>Admin:</strong> admin@platform.com / admin123<br>
+                <span style="color:var(--gray);">Register as vendor to create new accounts</span>
+            </div>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" class="form-control" id="email" required placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <div style="position:relative;">
+                        <input type="password" class="form-control" id="password" required placeholder="Enter your password" style="padding-right:44px;">
+                        <button type="button" onclick="togglePasswordField('password', this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:1.1rem;line-height:1;padding:4px;" aria-label="Show password">👁️</button>
+                    </div>
+                </div>
+
+                <div id="alertBox"></div>
+
+                <button type="submit" class="btn btn-primary btn-block btn-lg" id="submitBtn">Login</button>
+                <p style="text-align:center;margin-top:0.75rem;"><a href="#" onclick="showForgotPassword();return false;" style="color:var(--gray-500);font-size:0.9rem;">Forgot password?</a></p>
+            </form>
+
+            <div id="forgotStep1" style="display:none;">
+                <p style="color:var(--gray-500);margin-bottom:1rem;">Enter the phone number on your vendor account. If it matches, we'll send a 6-digit reset code to it by SMS.</p>
+                <div class="form-group">
+                    <label class="form-label">Phone Number</label>
+                    <input type="tel" class="form-control" id="resetPhone" placeholder="Phone number used at registration">
+                </div>
+                <div id="forgotAlertBox"></div>
+                <button type="button" class="btn btn-primary btn-block btn-lg" onclick="requestResetCode()" id="requestCodeBtn">Send Reset Code</button>
+                <p style="text-align:center;margin-top:0.75rem;"><a href="#" onclick="backToLogin();return false;" style="color:var(--gray-500);font-size:0.9rem;">← Back to login</a></p>
+            </div>
+
+            <div id="forgotStep2" style="display:none;">
+                <p style="color:var(--gray-500);margin-bottom:1rem;">Enter the 6-digit code you were sent, and your new password.</p>
+                <div class="form-group">
+                    <label class="form-label">Reset Code</label>
+                    <input type="text" class="form-control" id="resetCode" placeholder="6-digit code" maxlength="6">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">New Password</label>
+                    <div style="position:relative;">
+                        <input type="password" class="form-control" id="newPassword" placeholder="At least 6 characters" style="padding-right:44px;">
+                        <button type="button" onclick="togglePasswordField('newPassword', this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:1.1rem;line-height:1;padding:4px;" aria-label="Show password">👁️</button>
+                    </div>
+                </div>
+                <div id="resetAlertBox"></div>
+                <button type="button" class="btn btn-primary btn-block btn-lg" onclick="submitNewPassword()" id="resetBtn">Reset Password</button>
+                <p style="text-align:center;margin-top:0.75rem;"><a href="#" onclick="backToLogin();return false;" style="color:var(--gray-500);font-size:0.9rem;">← Back to login</a></p>
+            </div>
+
+            <div class="auth-footer">
+                Don't have a vendor account? <a href="vendor-register.html">Register here</a><br>
+                <a href="index.html" style="color:var(--gray);">← Back to Home</a>
+            </div>
+        </div>
+        <div class="auth-image-section">
+            <h3>Vendor Portal</h3>
+            <p>Manage your products, track inventory, process orders, and grow your business with Bricks4Bills's vendor tools.</p>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://bricks4bills-production.up.railway.app/api';
+
+        function showAlert(message, type) {
+            document.getElementById('alertBox').innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+        }
+
+        function togglePasswordField(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const showing = input.type === 'text';
+            input.type = showing ? 'password' : 'text';
+            btn.textContent = showing ? '👁️' : '🙈';
+            btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+        }
+
+        function showForgotPassword() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('forgotStep1').style.display = 'block';
+            document.getElementById('forgotStep2').style.display = 'none';
+        }
+
+        function backToLogin() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('forgotStep1').style.display = 'none';
+            document.getElementById('forgotStep2').style.display = 'none';
+        }
+
+        let resetPhoneNumber = '';
+
+        async function requestResetCode() {
+            const phone = document.getElementById('resetPhone').value.trim();
+            const box = document.getElementById('forgotAlertBox');
+            const btn = document.getElementById('requestCodeBtn');
+            if (!phone) {
+                box.innerHTML = '<div class="alert alert-danger">Enter your phone number</div>';
+                return;
+            }
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> Sending...';
+            try {
+                const res = await fetch(`${API_URL}/auth/forgot-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone_number: phone })
+                });
+                const result = await res.json();
+                resetPhoneNumber = phone;
+                box.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+                document.getElementById('forgotStep1').style.display = 'none';
+                document.getElementById('forgotStep2').style.display = 'block';
+            } catch (err) {
+                box.innerHTML = '<div class="alert alert-danger">Network error. Please try again.</div>';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Send Reset Code';
+            }
+        }
+
+        async function submitNewPassword() {
+            const code = document.getElementById('resetCode').value.trim();
+            const newPassword = document.getElementById('newPassword').value;
+            const box = document.getElementById('resetAlertBox');
+            const btn = document.getElementById('resetBtn');
+            if (!code || !newPassword) {
+                box.innerHTML = '<div class="alert alert-danger">Enter the code and your new password</div>';
+                return;
+            }
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> Resetting...';
+            try {
+                const res = await fetch(`${API_URL}/auth/reset-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone_number: resetPhoneNumber, code, newPassword })
+                });
+                const result = await res.json();
+                if (res.ok) {
+                    box.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+                    setTimeout(backToLogin, 2000);
+                } else {
+                    box.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
+                }
+            } catch (err) {
+                box.innerHTML = '<div class="alert alert-danger">Network error. Please try again.</div>';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Reset Password';
+            }
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="loading"></span> Logging in...';
+
+            const data = {
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value
+            };
+
+            try {
+                const res = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+
+                if (res.ok) {
+                    localStorage.setItem('token', result.token);
+                    localStorage.setItem('user', JSON.stringify(result.user));
+                    showAlert('Login successful! Redirecting...', 'success');
+                    setTimeout(() => {
+                        if (result.user.user_type === 'vendor') window.location.href = 'vendor-dashboard.html';
+                        else if (result.user.user_type === 'admin') window.location.href = 'admin-dashboard.html';
+                    }, 1000);
+                } else {
+                    showAlert(result.message || 'Login failed', 'danger');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Login';
+                }
+            } catch (err) {
+                showAlert('Network error. Please try again.', 'danger');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Login';
+            }
+        });
+    </script>
+
+
+</body>
+</html>
